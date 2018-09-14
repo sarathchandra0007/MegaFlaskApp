@@ -1,1 +1,1 @@
-from app imort app
+from app import app
