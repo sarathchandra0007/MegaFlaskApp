@@ -4,6 +4,16 @@ from flask_login import login_user, current_user, logout_user, login_required
 from app import app, db
 from app.forms import LoginForm, RegistrationForm
 from app.models import User
+from datetime import datetime
+
+
+#Update datetime to database when ever user logs in
+@app.before_request
+def before_request():
+    if current_user.is_authenticated:
+        current_user.last_seen = datetime.utcnow()
+        db.session.commit()
+
 @app.route('/')
 @app.route('/index')
 @login_required
