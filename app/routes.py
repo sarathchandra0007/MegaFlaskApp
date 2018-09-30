@@ -1,4 +1,4 @@
-from flask import render_template,flash,redirect, url_for,request
+from flask import render_template,flash,redirect, url_for,request,g
 from werkzeug.urls import url_parse
 from flask_login import login_user, current_user, logout_user, login_required
 from app import app, db
@@ -6,7 +6,7 @@ from app.forms import LoginForm, RegistrationForm, EditProfileForm, Postform, Re
 from app.models import User, Post
 from datetime import datetime
 from app.email import send_password_reset_email
-
+from flask_babel import _, get_locale
 
 #Update datetime to database when ever user logs in
 @app.before_request
@@ -14,6 +14,7 @@ def before_request():
     if current_user.is_authenticated:
         current_user.last_seen = datetime.utcnow()
         db.session.commit()
+    g.locale = str(get_locale())
 
 @app.route('/',methods=['GET','POST'])
 @app.route('/index',methods=['GET','POST'])
@@ -24,7 +25,7 @@ def index():
         post = Post(body=form.post.data,author=current_user)
         db.session.add(post)
         db.session.commit()
-        flash('Post is live now!!!')
+        flash(_('Post is live now!!!'))
         return redirect(url_for('index'))
     page     = request.args.get('page',1,type=int)
     posts    = current_user.followed_posts().paginate(page,app.config['POSTS_PER_PAGE'],False)   #pagination
@@ -49,7 +50,7 @@ def login():
     if form.validate_on_submit():
         user = User.query.filter_by(username=form.username.data).first()
         if user is None or not user.check_password(form.password.data):
-            flash('Invalid Username or Password')
+            flash(_('Invalid Username or Password'))
             return redirect(url_for('login'))
         login_user(user,remember=form.remember_me.data)  #session storing
         next_page = request.args.get('next')
@@ -73,7 +74,7 @@ def register():
         user.set_password(form.password.data)
         db.session.add(user)
         db.session.commit()
-        flash ('Congratulations you are now a registered user')
+        flash (_('Congratulations you are now a registered user'))
         return redirect(url_for('login'))
     return render_template('register.html',form=form,title='Register')
 
@@ -109,7 +110,8 @@ def edit_profile():
 def follow(username):
     user=User.query.filter_by(username=username).first()
     if user is None:
-        flash('User {} not found'.format(username))
+        #flash('User {} not found'.format(username))
+        flash(_('User %(uname)s not found.',uname=username))
         return redirect(url_for('index'))
     if user==current_user:
         flash('You cannot follow yourself!!')
@@ -158,6 +160,6 @@ def reset_password(token):
     if form.validate_on_submit():
         user.set_password(form.password.data)
         db.session.commit()
-        flash('Your password has been reset.')
+        flash(_('Your password has been reset.'))
         return redirect(url_for('login'))
     return render_template('reset_password.html', form=form)
